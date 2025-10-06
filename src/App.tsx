@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react';
 import Banner from './components/Banner';
 import CourseList from './components/CourseList';
+import TermSelector from './components/TermSelector';
 
 type Course = {
   term: 'Fall' | 'Winter' | 'Spring' | string;
@@ -18,6 +19,7 @@ export default function App() {
   const [courses, setCourses] = useState<CoursesMap | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError]   = useState<string | null>(null);
+  const [selectedTerm, setSelectedTerm] = useState<'Fall' | 'Winter' | 'Spring'>('Fall');
 
   useEffect(() => {
     const ctrl = new AbortController();
@@ -52,6 +54,10 @@ export default function App() {
   return (
     <main>
       <Banner title="CS Courses for 2018–2019" />
+      <TermSelector 
+        selectedTerm={selectedTerm} 
+        onTermChange={setSelectedTerm} 
+      />
 
       {loading && <p style={{ padding: 16 }}>Loading courses…</p>}
 
@@ -61,7 +67,7 @@ export default function App() {
         </p>
       )}
 
-      {courses && <CourseList courses={courses} />}
+      {courses && <CourseList courses={courses} selectedTerm={selectedTerm}/>}
     </main>
   );
 }
