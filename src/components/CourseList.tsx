@@ -1,51 +1,100 @@
 // src/components/CourseList.tsx
-import type { CoursesMap} from '../hooks/useCourses';
+import React from 'react';
 
-type CourseListProps = { courses: CoursesMap;selectedTerm: 'Fall' | 'Winter' | 'Spring'; };
+type Course = {
+  term: 'Fall' | 'Winter' | 'Spring' | string;
+  number: string;
+  meets: string;
+  title: string;
+};
+type CoursesMap = Record<string, Course>;
 
-export default function CourseList({ courses,selectedTerm }: CourseListProps) {
-  const filteredCourses = Object.entries(courses).filter(
-    ([_, course]) => course.term === selectedTerm
-  );
+type Props = {
+  courses: CoursesMap;
+  selectedTerm: 'Fall' | 'Winter' | 'Spring';
+  selected: Set<string>;
+  onToggle: (id: string) => void;
+};
 
-  // Sort filtered courses by number (numeric when possible)
-  filteredCourses.sort(([, a], [, b]) => Number(a.number) - Number(b.number));
-
-  // // Group by term
-  // const byTerm = new Map<string, Array<[string, Course]>>();
-  // for (const e of entries) {
-  //   const term = e[1].term || 'Other';
-  //   if (!byTerm.has(term)) byTerm.set(term, []);
-  //   byTerm.get(term)!.push(e);
-  // }
-
-  // // Sort terms in desired order
-  // const termOrder = ['Fall', 'Winter', 'Spring'];
-  // const terms = Array.from(byTerm.keys()).sort((a, b) => {
-  //   const ia = termOrder.indexOf(a);
-  //   const ib = termOrder.indexOf(b);
-  //   return (ia === -1 ? 99 : ia) - (ib === -1 ? 99 : ib);
-  // });
+export default function CourseList({ courses, selectedTerm, selected, onToggle }: Props) {
+  const entries = Object.entries(courses)
+    .filter(([_, c]) => c.term === selectedTerm);
 
   return (
-    <section className="p-4">
-      <div className="mb-8">
-        <h2 className="mb-3 text-xl font-semibold">{selectedTerm}</h2>
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {filteredCourses.map(([id, c]) => (
-            <div
+    <div style={{ padding: 16 }}>
+      <div
+        style={{
+          display: 'grid',
+          gap: 12,
+          gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))'
+        }}
+      >
+        {entries.map(([id, course]) => {
+          const isSelected = selected.has(id);
+          return (
+            <button
               key={id}
-              className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm hover:shadow-md transition"
+              onClick={() => onToggle(id)}
+              role="switch"
+              aria-checked={isSelected}
+              title={isSelected ? 'Unselect' : 'Select'}
+              style={{
+                textAlign: 'left',
+                padding: '14px 16px',
+                borderRadius: 8,
+                border: `2px solid ${isSelected ? '#22c55e' : '#e5e7eb'}`,
+                background: isSelected ? '#ecfdf5' : '#fff',
+                boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
+                cursor: 'pointer',
+                transition: 'all .15s',
+                position: 'relative'
+              }}
             >
-              <div className="text-lg font-semibold">CS {c.number}</div>
-              <div className="mt-1 text-sm text-gray-600">{c.title}</div>
-              <div className="mt-3 text-sm font-medium text-gray-800">
-                {c.meets}
+              {}
+              {isSelected && (
+                <span
+                  aria-hidden
+                  style={{
+                    position: 'absolute',
+                    top: 8,
+                    right: 8,
+                    width: 24,
+                    height: 24,
+                    borderRadius: '50%',
+                    border: '2px solid #22c55e',
+                    display: 'grid',
+                    placeItems: 'center',
+                    fontWeight: 700,
+                  }}
+                >
+                  ✓
+                </span>
+              )}
+
+              <div style={{ fontSize: 12, color: '#6b7280', marginBottom: 6 }}>
+                {course.term}
               </div>
-            </div>
-          ))}
-        </div>
+              <div style={{ fontWeight: 700, marginBottom: 4 }}>
+                {id} — {course.title}
+              </div>
+              <div style={{ fontSize: 13, color: '#374151' }}>
+                {course.number} · {course.meets || 'TBA'}
+              </div>
+
+              {/* subtle selected label */}
+              {isSelected && (
+                <div style={{ marginTop: 10, fontSize: 12, color: '#065f46', fontWeight: 600 }}>
+                  Selected
+                </div>
+              )}
+            </button>
+          );
+        })}
       </div>
-    </section>
+
+      {entries.length === 0 && (
+        <p style={{ paddingTop: 16 }}>No courses found for {selectedTerm}.</p>
+      )}
+    </div>
   );
 }
