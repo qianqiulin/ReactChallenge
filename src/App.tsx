@@ -1,8 +1,9 @@
 // src/App.tsx
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo,useState } from 'react';
 import Banner from './components/Banner';
 import CourseList from './components/CourseList';
 import TermSelector from './components/TermSelector';
+import CoursePlanModal from './components/CoursePlanModal';
 
 type Course = {
   term: 'Fall' | 'Winter' | 'Spring' | string;
@@ -23,6 +24,8 @@ export default function App() {
 
   // NEW: selected courses (by id/key of the map)
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [isPlanOpen, setPlanOpen] = useState(false);
+
 
   const toggleCourse = (id: string) => {
     setSelected(prev => {
@@ -54,11 +57,44 @@ export default function App() {
     })();
     return () => ctrl.abort();
   }, []);
+  const selectedCount = selected.size;
+  const headerRightLabel = useMemo(
+    () => (selectedCount === 0 ? 'Course Plan' : `Course Plan (${selectedCount})`),
+    [selectedCount]
+  );
 
   return (
     <main>
       <Banner title="CS Courses for 2018–2019" />
-      <TermSelector selectedTerm={selectedTerm} onTermChange={setSelectedTerm} />
+
+      {/* Header row: Term selector (left) + Course Plan button (right) */}
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        gap: 12,
+        padding: '12px 16px'
+      }}>
+        <TermSelector selectedTerm={selectedTerm} onTermChange={setSelectedTerm} />
+
+        <button
+          onClick={() => setPlanOpen(true)}
+          aria-haspopup="dialog"
+          aria-expanded={isPlanOpen}
+          style={{
+            padding: '10px 14px',
+            borderRadius: 8,
+            border: '1px solid #e5e7eb',
+            background: '#111827',
+            color: '#fff',
+            cursor: 'pointer',
+            fontWeight: 600,
+            boxShadow: '0 1px 2px rgba(0,0,0,0.08)'
+          }}
+        >
+          {headerRightLabel}
+        </button>
+      </div>
 
       {loading && <p style={{ padding: 16 }}>Loading courses…</p>}
       {error && <p style={{ padding: 16, color: 'crimson' }}>Failed to load courses: {error}</p>}
@@ -71,6 +107,8 @@ export default function App() {
             selected={selected}
             onToggle={toggleCourse}
           />
+
+          {/* (Optional) Keep this simple list on the page if you still want it */}
           <section style={{ padding: '16px 16px 32px' }}>
             <h3>Selected classes ({selected.size})</h3>
             {selected.size === 0 ? (
@@ -86,6 +124,14 @@ export default function App() {
           </section>
         </>
       )}
+
+      {/* Course Plan Modal */}
+      <CoursePlanModal
+        isOpen={isPlanOpen}
+        onClose={() => setPlanOpen(false)}
+        courses={courses}
+        selected={selected}
+      />
     </main>
   );
 }
