@@ -1,5 +1,5 @@
 // src/components/CourseList.tsx
-import React from 'react';
+import { isCourseSelectable } from '../utils/conflicts';
 
 type Course = {
   term: 'Fall' | 'Winter' | 'Spring' | string;
@@ -31,26 +31,43 @@ export default function CourseList({ courses, selectedTerm, selected, onToggle }
       >
         {entries.map(([id, course]) => {
           const isSelected = selected.has(id);
+          const selectable = isCourseSelectable(id, courses, selected);
+          const disabled = !selectable && !isSelected;
+
           return (
             <button
               key={id}
-              onClick={() => onToggle(id)}
+              onClick={() => {
+                if (disabled) return; // block selecting when conflicted
+                onToggle(id);
+              }}
               role="switch"
               aria-checked={isSelected}
-              title={isSelected ? 'Unselect' : 'Select'}
+              aria-disabled={disabled}
+              title={
+                disabled
+                  ? 'Time conflict with a selected course'
+                  : isSelected
+                    ? 'Unselect'
+                    : 'Select'
+              }
               style={{
                 textAlign: 'left',
                 padding: '14px 16px',
                 borderRadius: 8,
-                border: `2px solid ${isSelected ? '#22c55e' : '#e5e7eb'}`,
+                border: `2px solid ${
+                  isSelected ? '#22c55e' : disabled ? '#e5e7eb' : '#e5e7eb'
+                }`,
                 background: isSelected ? '#ecfdf5' : '#fff',
                 boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
-                cursor: 'pointer',
+                cursor: disabled ? 'not-allowed' : 'pointer',
+                opacity: disabled ? 0.45 : 1,
+                position: 'relative',
                 transition: 'all .15s',
-                position: 'relative'
+                pointerEvents: disabled ? 'auto' : 'auto' // keep hover/title
               }}
             >
-              {}
+              {/* Selected badge */}
               {isSelected && (
                 <span
                   aria-hidden
@@ -71,6 +88,29 @@ export default function CourseList({ courses, selectedTerm, selected, onToggle }
                 </span>
               )}
 
+              {/* Conflict badge for disabled cards */}
+              {disabled && (
+                <span
+                  aria-hidden
+                  style={{
+                    position: 'absolute',
+                    top: 8,
+                    right: 8,
+                    width: 24,
+                    height: 24,
+                    borderRadius: '50%',
+                    border: '2px solid #9ca3af',
+                    display: 'grid',
+                    placeItems: 'center',
+                    fontWeight: 700,
+                    color: '#6b7280'
+                  }}
+                  title="Time conflict"
+                >
+                  ×
+                </span>
+              )}
+
               <div style={{ fontSize: 12, color: '#6b7280', marginBottom: 6 }}>
                 {course.term}
               </div>
@@ -81,10 +121,14 @@ export default function CourseList({ courses, selectedTerm, selected, onToggle }
                 {course.number} · {course.meets || 'TBA'}
               </div>
 
-              {/* subtle selected label */}
               {isSelected && (
                 <div style={{ marginTop: 10, fontSize: 12, color: '#065f46', fontWeight: 600 }}>
                   Selected
+                </div>
+              )}
+              {disabled && (
+                <div style={{ marginTop: 10, fontSize: 12, color: '#6b7280', fontWeight: 600 }}>
+                  Conflicts with your plan
                 </div>
               )}
             </button>
