@@ -1,4 +1,5 @@
 // src/components/CourseList.tsx
+import { Link } from 'react-router-dom';
 import { isCourseSelectable } from '../utils/conflicts';
 
 type Course = {
@@ -53,21 +54,20 @@ export default function CourseList({ courses, selectedTerm, selected, onToggle }
               }
               style={{
                 textAlign: 'left',
-                padding: '14px 16px',
+                padding: '14px 16px 38px', // extra bottom space for the Edit link row
                 borderRadius: 8,
                 border: `2px solid ${
-                  isSelected ? '#22c55e' : disabled ? '#e5e7eb' : '#e5e7eb'
+                  isSelected ? '#22c55e' : '#e5e7eb'
                 }`,
                 background: isSelected ? '#ecfdf5' : '#fff',
                 boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
                 cursor: disabled ? 'not-allowed' : 'pointer',
                 opacity: disabled ? 0.45 : 1,
                 position: 'relative',
-                transition: 'all .15s',
-                pointerEvents: disabled ? 'auto' : 'auto' // keep hover/title
+                transition: 'all .15s'
               }}
             >
-              {/* Selected badge */}
+              {/* Top-right status badge */}
               {isSelected && (
                 <span
                   aria-hidden
@@ -87,8 +87,6 @@ export default function CourseList({ courses, selectedTerm, selected, onToggle }
                   ✓
                 </span>
               )}
-
-              {/* Conflict badge for disabled cards */}
               {disabled && (
                 <span
                   aria-hidden
@@ -110,7 +108,6 @@ export default function CourseList({ courses, selectedTerm, selected, onToggle }
                   ×
                 </span>
               )}
-
               <div style={{ fontSize: 12, color: '#6b7280', marginBottom: 6 }}>
                 {course.term}
               </div>
@@ -121,16 +118,44 @@ export default function CourseList({ courses, selectedTerm, selected, onToggle }
                 {course.number} · {course.meets || 'TBA'}
               </div>
 
-              {isSelected && (
-                <div style={{ marginTop: 10, fontSize: 12, color: '#065f46', fontWeight: 600 }}>
-                  Selected
-                </div>
-              )}
-              {disabled && (
-                <div style={{ marginTop: 10, fontSize: 12, color: '#6b7280', fontWeight: 600 }}>
-                  Conflicts with your plan
-                </div>
-              )}
+              {/* Footer row with the Edit link */}
+              <div
+                style={{
+                  position: 'absolute',
+                  left: 16,
+                  right: 16,
+                  bottom: 10,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between'
+                }}
+              >
+                <Link
+                  to={`/courses/${id}/edit`}
+                  onClick={(e) => e.stopPropagation()} // <- prevents toggling selection
+                  style={{
+                    fontSize: 12,
+                    textDecoration: 'underline',
+                    color: disabled ? '#9ca3af' : '#2563eb',
+                    pointerEvents: disabled ? 'none' : 'auto'
+                  }}
+                  aria-label={`Edit course ${id}`}
+                >
+                  Edit
+                </Link>
+
+                {/* Optional mini labels on the right */}
+                {isSelected && (
+                  <span style={{ fontSize: 12, color: '#065f46', fontWeight: 600 }}>
+                    Selected
+                  </span>
+                )}
+                {disabled && (
+                  <span style={{ fontSize: 12, color: '#6b7280', fontWeight: 600 }}>
+                    Conflicts with your plan
+                  </span>
+                )}
+              </div>
             </button>
           );
         })}

@@ -1,9 +1,12 @@
 // src/App.tsx
 import { useEffect, useMemo,useState } from 'react';
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import Banner from './components/Banner';
 import CourseList from './components/CourseList';
 import TermSelector from './components/TermSelector';
 import CoursePlanModal from './components/CoursePlanModal';
+import CourseForm from './components/CourseForm';
+
 
 type Course = {
   term: 'Fall' | 'Winter' | 'Spring' | string;
@@ -63,7 +66,7 @@ export default function App() {
     [selectedCount]
   );
 
-  return (
+  const MainPage = (
     <main>
       <Banner title="CS Courses for 2018–2019" />
 
@@ -133,5 +136,13 @@ export default function App() {
         selected={selected}
       />
     </main>
+  );
+  return (
+    <BrowserRouter>
+      <Routes>
+        <Route path="/" element={MainPage} />
+        <Route path="/courses/:id/edit" element={<CourseForm courses={courses} />} />
+      </Routes>
+    </BrowserRouter>
   );
 }
