@@ -37,6 +37,15 @@ export default function App() {
       return next;
     });
   };
+  const updateCourse = (id: string, patch: Partial<Course>) => {
+  setCourses(prev => {
+    if (!prev || !prev[id]) return prev;
+    return {
+      ...prev,
+      [id]: { ...prev[id], ...patch }
+    };
+  });
+};
 
   useEffect(() => {
     const ctrl = new AbortController();
@@ -138,11 +147,15 @@ export default function App() {
     </main>
   );
   return (
-    <BrowserRouter>
-      <Routes>
-        <Route path="/" element={MainPage} />
-        <Route path="/courses/:id/edit" element={<CourseForm courses={courses} />} />
-      </Routes>
-    </BrowserRouter>
-  );
+  <BrowserRouter>
+    <Routes>
+      <Route path="/" element={MainPage} />
+      {/* pass the updater down */}
+      <Route
+        path="/courses/:id/edit"
+        element={<CourseForm courses={courses} onSave={updateCourse} />}
+      />
+    </Routes>
+  </BrowserRouter>
+);
 }
