@@ -1,34 +1,25 @@
 // src/App.tsx
-import { useEffect, useMemo,useState } from 'react';
+import { useMemo, useState } from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import Banner from './components/Banner';
 import CourseList from './components/CourseList';
 import TermSelector from './components/TermSelector';
 import CoursePlanModal from './components/CoursePlanModal';
 import CourseForm from './components/CourseForm';
-
-
+import { useCourses } from './utils/useCourses'; 
 type Course = {
   term: 'Fall' | 'Winter' | 'Spring' | string;
   number: string;
   meets: string;
   title: string;
 };
-type CoursesMap = Record<string, Course>;
-
-const DATA_URL =
-  'https://courses.cs.northwestern.edu/394/guides/data/cs-courses.php';
-
 export default function App() {
-  const [courses, setCourses] = useState<CoursesMap | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError]   = useState<string | null>(null);
-  const [selectedTerm, setSelectedTerm] = useState<'Fall' | 'Winter' | 'Spring'>('Fall');
+  // 🔁 Live data from Firebase
+  const { courses, loading, error } = useCourses();
 
-  // NEW: selected courses (by id/key of the map)
+  const [selectedTerm, setSelectedTerm] = useState<'Fall' | 'Winter' | 'Spring'>('Fall');
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [isPlanOpen, setPlanOpen] = useState(false);
-
 
   const toggleCourse = (id: string) => {
     setSelected(prev => {
@@ -37,38 +28,13 @@ export default function App() {
       return next;
     });
   };
-  const updateCourse = (id: string, patch: Partial<Course>) => {
-  setCourses(prev => {
-    if (!prev || !prev[id]) return prev;
-    return {
-      ...prev,
-      [id]: { ...prev[id], ...patch }
-    };
-  });
-};
 
-  useEffect(() => {
-    const ctrl = new AbortController();
-    (async () => {
-      try {
-        setLoading(true);
-        setError(null);
-        const res = await fetch(DATA_URL, { signal: ctrl.signal });
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const data = await res.json();
-        if (data && typeof data === 'object' && data.courses) {
-          setCourses(data.courses as CoursesMap);
-        } else {
-          throw new Error('Unexpected data shape: missing "courses"');
-        }
-      } catch (e: any) {
-        if (e?.name !== 'AbortError') setError(e?.message ?? 'Failed to load courses');
-      } finally {
-        setLoading(false);
-      }
-    })();
-    return () => ctrl.abort();
-  }, []);
+  // NOTE: still in-memory; you’ll wire this to Firebase writes in the next task
+  const updateCourse = (id: string, patch: Partial<Course>) => {
+    console.warn('updateCourse is currently in-memory only. Wire to Firebase in the next task.', id, patch);
+    // If you want to keep a local mirror, you can manage it via context or lift state here.
+  };
+
   const selectedCount = selected.size;
   const headerRightLabel = useMemo(
     () => (selectedCount === 0 ? 'Course Plan' : `Course Plan (${selectedCount})`),
@@ -80,13 +46,15 @@ export default function App() {
       <Banner title="CS Courses for 2018–2019" />
 
       {/* Header row: Term selector (left) + Course Plan button (right) */}
-      <div style={{
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        gap: 12,
-        padding: '12px 16px'
-      }}>
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: 12,
+          padding: '12px 16px'
+        }}
+      >
         <TermSelector selectedTerm={selectedTerm} onTermChange={setSelectedTerm} />
 
         <button
@@ -120,7 +88,7 @@ export default function App() {
             onToggle={toggleCourse}
           />
 
-          {/* (Optional) Keep this simple list on the page if you still want it */}
+          {/* Optional: keep this simple list */}
           <section style={{ padding: '16px 16px 32px' }}>
             <h3>Selected classes ({selected.size})</h3>
             {selected.size === 0 ? (
@@ -129,7 +97,11 @@ export default function App() {
               <ul>
                 {Array.from(selected).map(id => {
                   const c = courses[id];
-                  return <li key={id}>{id} — {c?.title}</li>;
+                  return (
+                    <li key={id}>
+                      {id} — {c?.title}
+                    </li>
+                  );
                 })}
               </ul>
             )}
@@ -146,16 +118,17 @@ export default function App() {
       />
     </main>
   );
+
   return (
-  <BrowserRouter>
-    <Routes>
-      <Route path="/" element={MainPage} />
-      {/* pass the updater down */}
-      <Route
-        path="/courses/:id/edit"
-        element={<CourseForm courses={courses} onSave={updateCourse} />}
-      />
-    </Routes>
-  </BrowserRouter>
-);
+    <BrowserRouter>
+      <Routes>
+        <Route path="/" element={MainPage} />
+        {/* pass the updater down (will wire to Firebase next) */}
+        <Route
+          path="/courses/:id/edit"
+          element={<CourseForm courses={courses} onSave={updateCourse} />}
+        />
+      </Routes>
+    </BrowserRouter>
+  );
 }
