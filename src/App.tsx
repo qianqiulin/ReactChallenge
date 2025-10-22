@@ -6,15 +6,19 @@ import CourseList from './components/CourseList';
 import TermSelector from './components/TermSelector';
 import CoursePlanModal from './components/CoursePlanModal';
 import CourseForm from './components/CourseForm';
-import { useCourses } from './utils/useCourses'; 
+import { useCourses } from './utils/useCourses';
+import { ref, update } from 'firebase/database';
+import { db } from './utils/firebase';
+
 type Course = {
-  term: 'Fall' | 'Winter' | 'Spring' | string;
+  term: 'Fall' | 'Winter' | 'Spring' | 'Summer' | string;
   number: string;
   meets: string;
   title: string;
 };
+
 export default function App() {
-  // 🔁 Live data from Firebase
+  // Live data from Firebase
   const { courses, loading, error } = useCourses();
 
   const [selectedTerm, setSelectedTerm] = useState<'Fall' | 'Winter' | 'Spring'>('Fall');
@@ -29,10 +33,11 @@ export default function App() {
     });
   };
 
-  // NOTE: still in-memory; you’ll wire this to Firebase writes in the next task
+  // Save edits to Firebase
   const updateCourse = (id: string, patch: Partial<Course>) => {
-    console.warn('updateCourse is currently in-memory only. Wire to Firebase in the next task.', id, patch);
-    // If you want to keep a local mirror, you can manage it via context or lift state here.
+    if (!id) return;
+    // Writes only the changed keys under /courses/:id
+    return update(ref(db, `courses/${id}`), patch);
   };
 
   const selectedCount = selected.size;
@@ -88,7 +93,6 @@ export default function App() {
             onToggle={toggleCourse}
           />
 
-          {/* Optional: keep this simple list */}
           <section style={{ padding: '16px 16px 32px' }}>
             <h3>Selected classes ({selected.size})</h3>
             {selected.size === 0 ? (
@@ -123,7 +127,6 @@ export default function App() {
     <BrowserRouter>
       <Routes>
         <Route path="/" element={MainPage} />
-        {/* pass the updater down (will wire to Firebase next) */}
         <Route
           path="/courses/:id/edit"
           element={<CourseForm courses={courses} onSave={updateCourse} />}

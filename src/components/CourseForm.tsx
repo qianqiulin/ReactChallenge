@@ -1,3 +1,4 @@
+// src/components/CourseForm.tsx
 import { useEffect, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
@@ -9,8 +10,11 @@ type CoursesMap = Record<string, Course>;
 
 type Props = {
   courses: CoursesMap | null;
-  onSave: (id: string, patch: Partial<Course>) => void; // NEW
+  onSave: (id: string, patch: Partial<Course>) => Promise<unknown> | void;
 };
+
+// simple stable stringify for shallow objects
+const stable = (o: unknown) => JSON.stringify(o, Object.keys(o as any).sort());
 
 export default function CourseForm({ courses, onSave }: Props) {
   const { id } = useParams();
@@ -21,40 +25,75 @@ export default function CourseForm({ courses, onSave }: Props) {
   const {
     register,
     handleSubmit,
-    setValue,
+    reset,
+    watch,
     formState: { errors, isValid, isSubmitting },
     trigger
   } = useForm<CourseFormData>({
     resolver: zodResolver(CourseZ),
-    mode: 'onBlur',
+    mode: 'onChange',          // validate as the user types
     reValidateMode: 'onChange',
+    criteriaMode: 'all',
+    shouldUnregister: false,
     defaultValues: { title: '', term: 'Fall', number: '', meets: '' }
   });
 
+  // Prefill and set pristine baseline
   useEffect(() => {
     if (course) {
-      setValue('title', course.title ?? '');
-      setValue('term', (course.term as any) ?? 'Fall');
-      setValue('number', course.number ?? '');
-      setValue('meets', course.meets ?? '');
-      void trigger();
+      reset(
+        {
+          title: course.title ?? '',
+          term: (course.term as any) ?? 'Fall',
+          number: course.number ?? '',
+          meets: course.meets ?? ''
+        },
+        { keepDirty: false, keepTouched: false }
+      );
+      void trigger(); // compute initial validity
     }
-  }, [course, setValue, trigger]);
+  }, [course, reset, trigger]);
 
-  const onValid = (data: CourseFormData) => {
+  // Custom "dirty" detector: compare current values vs original course
+  const current = watch();
+  const baseline = useMemo(() => {
+    if (!course) return null;
+    // normalize by trimming strings to avoid trailing-space mismatches
+    return {
+      title: (course.title ?? '').trim(),
+      term: (course.term ?? '').trim(),
+      number: (course.number ?? '').trim(),
+      meets: (course.meets ?? '').trim()
+    };
+  }, [course]);
+
+  const isChanged = useMemo(() => {
+    if (!baseline) return false;
+    const normalized = {
+      title: (current.title ?? '').trim(),
+      term: (current.term ?? '').trim(),
+      number: (current.number ?? '').trim(),
+      meets: (current.meets ?? '').trim()
+    };
+    return stable(normalized) !== stable(baseline);
+  }, [baseline, current]);
+
+  // Submit handler: only submit if valid AND changed
+  const onValid = async (data: CourseFormData) => {
     if (!id) return;
-    // Actually update the course in App state
-    onSave(id, {
-      title: data.title,
-      term: data.term,
-      number: data.number,
-      meets: data.meets
+    if (!isChanged) return; // block no-op submits
+
+    await onSave(id, {
+      title: data.title.trim(),
+      term: data.term.trim(),
+      number: data.number.trim(),
+      meets: data.meets.trim()
     });
-    navigate('/'); // go back to list
+    navigate('/'); // back to list
   };
 
   const onInvalid = () => {
-    // errors already shown inline
+    // errors are already shown inline
   };
 
   if (!id) {
@@ -139,16 +178,21 @@ export default function CourseForm({ courses, onSave }: Props) {
 
           <button
             type="submit"
-            disabled={!isValid || isSubmitting}
+            disabled={!isValid || isSubmitting || !isChanged}
             style={{
               ...btnStyle,
-              opacity: !isValid || isSubmitting ? 0.6 : 1,
-              cursor: !isValid || isSubmitting ? 'not-allowed' : 'pointer'
+              opacity: (!isValid || isSubmitting || !isChanged) ? 0.6 : 1,
+              cursor: (!isValid || isSubmitting || !isChanged) ? 'not-allowed' : 'pointer'
             }}
           >
             Save
           </button>
         </div>
+
+        {/* Tiny debug row (optional): uncomment if you want to see why it's disabled */}
+        {/* <pre style={{marginTop:8,fontSize:12,opacity:.7}}>
+          {JSON.stringify({ isValid, isSubmitting, isChanged, current }, null, 2)}
+        </pre> */}
       </form>
     </main>
   );
