@@ -1,4 +1,4 @@
-// src/App.tsx
+
 import { useMemo, useState } from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import Banner from './components/Banner';
@@ -8,6 +8,7 @@ import CoursePlanModal from './components/CoursePlanModal';
 import CourseForm from './components/CourseForm';
 import { useCourses } from './utils/useCourses';
 import { useAuth } from './utils/useAuth';
+import { useAdmin } from './utils/useAdmin';
 import { ref, update } from 'firebase/database';
 import { db, signInWithGoogle, signOutUser } from './utils/firebase';
 
@@ -21,6 +22,7 @@ type Course = {
 export default function App() {
   const { courses, loading, error } = useCourses();
   const { user } = useAuth();
+  const { isAdmin } = useAdmin(user?.uid);
 
   const [selectedTerm, setSelectedTerm] = useState<'Fall' | 'Winter' | 'Spring'>('Fall');
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -34,9 +36,9 @@ export default function App() {
     });
   };
 
-  // Save edits to Firebase (any logged-in user can write; rules will enforce this too)
+  // Only authenticated admins can write
   const updateCourse = (id: string, patch: Partial<Course>) => {
-    if (!id || !user) return; // guard on client
+    if (!id || !user || !isAdmin) return;
     return update(ref(db, `courses/${id}`), patch);
   };
 
@@ -56,7 +58,7 @@ export default function App() {
     />
 
 
-      {/* Header row: Term selector (left) + buttons (right) */}
+      {/* Header row: Term selector (left) + auth + plan (right) */}
       <div
         style={{
           display: 'flex',
@@ -69,7 +71,6 @@ export default function App() {
         <TermSelector selectedTerm={selectedTerm} onTermChange={setSelectedTerm} />
 
         <div style={{ display: 'flex', gap: 8 }}>
-          {/* Sign in/out */}
           {user ? (
             <button
               onClick={signOutUser}
@@ -102,7 +103,6 @@ export default function App() {
             </button>
           )}
 
-          {/* Course Plan */}
           <button
             onClick={() => setPlanOpen(true)}
             aria-haspopup="dialog"
@@ -133,7 +133,7 @@ export default function App() {
             selectedTerm={selectedTerm}
             selected={selected}
             onToggle={toggleCourse}
-            canEdit={!!user}  // 👈 only show Edit when signed in
+            canEdit={!!user && isAdmin}    // 👈 show “Edit” only to admins
           />
 
           <section style={{ padding: '16px 16px 32px' }}>
@@ -144,11 +144,7 @@ export default function App() {
               <ul>
                 {Array.from(selected).map(id => {
                   const c = courses[id];
-                  return (
-                    <li key={id}>
-                      {id} — {c?.title}
-                    </li>
-                  );
+                  return <li key={id}>{id} — {c?.title}</li>;
                 })}
               </ul>
             )}
