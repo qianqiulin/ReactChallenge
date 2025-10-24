@@ -13,6 +13,14 @@ export default defineConfig({
         plugins: ['babel-plugin-react-compiler'],
       }
     })],
+    server: {
+    headers: {
+      // This is the one that matters for the popup warning
+      'Cross-Origin-Opener-Policy': 'same-origin-allow-popups',
+      // optional: many setups also include COEP, leave it unset unless you need it
+      // 'Cross-Origin-Embedder-Policy': 'require-corp',
+    }
+  },
   test: {
     globals: true,
     environment: 'jsdom'

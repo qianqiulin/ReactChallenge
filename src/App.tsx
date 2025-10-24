@@ -7,8 +7,9 @@ import TermSelector from './components/TermSelector';
 import CoursePlanModal from './components/CoursePlanModal';
 import CourseForm from './components/CourseForm';
 import { useCourses } from './utils/useCourses';
+import { useAuth } from './utils/useAuth';
 import { ref, update } from 'firebase/database';
-import { db } from './utils/firebase';
+import { db, signInWithGoogle, signOutUser } from './utils/firebase';
 
 type Course = {
   term: 'Fall' | 'Winter' | 'Spring' | 'Summer' | string;
@@ -18,8 +19,8 @@ type Course = {
 };
 
 export default function App() {
-  // Live data from Firebase
   const { courses, loading, error } = useCourses();
+  const { user } = useAuth();
 
   const [selectedTerm, setSelectedTerm] = useState<'Fall' | 'Winter' | 'Spring'>('Fall');
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -33,10 +34,9 @@ export default function App() {
     });
   };
 
-  // Save edits to Firebase
+  // Save edits to Firebase (any logged-in user can write; rules will enforce this too)
   const updateCourse = (id: string, patch: Partial<Course>) => {
-    if (!id) return;
-    // Writes only the changed keys under /courses/:id
+    if (!id || !user) return; // guard on client
     return update(ref(db, `courses/${id}`), patch);
   };
 
@@ -48,9 +48,15 @@ export default function App() {
 
   const MainPage = (
     <main>
-      <Banner title="CS Courses for 2018–2019" />
+      <Banner
+      title="CS Courses for 2018–2019"
+      user={user}
+      onSignIn={signInWithGoogle}
+      onSignOut={signOutUser}
+    />
 
-      {/* Header row: Term selector (left) + Course Plan button (right) */}
+
+      {/* Header row: Term selector (left) + buttons (right) */}
       <div
         style={{
           display: 'flex',
@@ -62,23 +68,59 @@ export default function App() {
       >
         <TermSelector selectedTerm={selectedTerm} onTermChange={setSelectedTerm} />
 
-        <button
-          onClick={() => setPlanOpen(true)}
-          aria-haspopup="dialog"
-          aria-expanded={isPlanOpen}
-          style={{
-            padding: '10px 14px',
-            borderRadius: 8,
-            border: '1px solid #e5e7eb',
-            background: '#111827',
-            color: '#fff',
-            cursor: 'pointer',
-            fontWeight: 600,
-            boxShadow: '0 1px 2px rgba(0,0,0,0.08)'
-          }}
-        >
-          {headerRightLabel}
-        </button>
+        <div style={{ display: 'flex', gap: 8 }}>
+          {/* Sign in/out */}
+          {user ? (
+            <button
+              onClick={signOutUser}
+              style={{
+                padding: '8px 12px',
+                borderRadius: 8,
+                border: '1px solid #e5e7eb',
+                background: '#fff',
+                cursor: 'pointer',
+                fontWeight: 600
+              }}
+              title={user.email ?? 'Signed in'}
+            >
+              Sign out
+            </button>
+          ) : (
+            <button
+              onClick={signInWithGoogle}
+              style={{
+                padding: '8px 12px',
+                borderRadius: 8,
+                border: '1px solid #e5e7eb',
+                background: '#111827',
+                color: '#fff',
+                cursor: 'pointer',
+                fontWeight: 600
+              }}
+            >
+              Sign in
+            </button>
+          )}
+
+          {/* Course Plan */}
+          <button
+            onClick={() => setPlanOpen(true)}
+            aria-haspopup="dialog"
+            aria-expanded={isPlanOpen}
+            style={{
+              padding: '10px 14px',
+              borderRadius: 8,
+              border: '1px solid #e5e7eb',
+              background: '#111827',
+              color: '#fff',
+              cursor: 'pointer',
+              fontWeight: 600,
+              boxShadow: '0 1px 2px rgba(0,0,0,0.08)'
+            }}
+          >
+            {headerRightLabel}
+          </button>
+        </div>
       </div>
 
       {loading && <p style={{ padding: 16 }}>Loading courses…</p>}
@@ -91,6 +133,7 @@ export default function App() {
             selectedTerm={selectedTerm}
             selected={selected}
             onToggle={toggleCourse}
+            canEdit={!!user}  // 👈 only show Edit when signed in
           />
 
           <section style={{ padding: '16px 16px 32px' }}>
@@ -113,7 +156,6 @@ export default function App() {
         </>
       )}
 
-      {/* Course Plan Modal */}
       <CoursePlanModal
         isOpen={isPlanOpen}
         onClose={() => setPlanOpen(false)}

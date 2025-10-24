@@ -1,6 +1,15 @@
 {
   "hosting": {
+    "site": "peterreact-93f6f",
     "public": "dist",
+    "headers": [
+      {
+        "source": "**",
+        "headers": [
+          { "key": "Cross-Origin-Opener-Policy", "value": "same-origin-allow-popups" }
+        ]
+      }
+    ],
     "ignore": [
       "firebase.json",
       "**/.*",

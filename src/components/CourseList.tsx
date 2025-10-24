@@ -15,9 +15,10 @@ type Props = {
   selectedTerm: 'Fall' | 'Winter' | 'Spring';
   selected: Set<string>;
   onToggle: (id: string) => void;
+  canEdit?: boolean; // 👈 NEW
 };
 
-export default function CourseList({ courses, selectedTerm, selected, onToggle }: Props) {
+export default function CourseList({ courses, selectedTerm, selected, onToggle, canEdit = false }: Props) {
   const entries = Object.entries(courses)
     .filter(([_, c]) => c.term === selectedTerm);
 
@@ -54,11 +55,9 @@ export default function CourseList({ courses, selectedTerm, selected, onToggle }
               }
               style={{
                 textAlign: 'left',
-                padding: '14px 16px 38px', // extra bottom space for the Edit link row
+                padding: '14px 16px 38px',
                 borderRadius: 8,
-                border: `2px solid ${
-                  isSelected ? '#22c55e' : '#e5e7eb'
-                }`,
+                border: `2px solid ${isSelected ? '#22c55e' : '#e5e7eb'}`,
                 background: isSelected ? '#ecfdf5' : '#fff',
                 boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
                 cursor: disabled ? 'not-allowed' : 'pointer',
@@ -67,7 +66,6 @@ export default function CourseList({ courses, selectedTerm, selected, onToggle }
                 transition: 'all .15s'
               }}
             >
-              {/* Top-right status badge */}
               {isSelected && (
                 <span
                   aria-hidden
@@ -130,21 +128,26 @@ export default function CourseList({ courses, selectedTerm, selected, onToggle }
                   justifyContent: 'space-between'
                 }}
               >
-                <Link
-                  to={`/courses/${id}/edit`}
-                  onClick={(e) => e.stopPropagation()} // <- prevents toggling selection
-                  style={{
-                    fontSize: 12,
-                    textDecoration: 'underline',
-                    color: disabled ? '#9ca3af' : '#2563eb',
-                    pointerEvents: disabled ? 'none' : 'auto'
-                  }}
-                  aria-label={`Edit course ${id}`}
-                >
-                  Edit
-                </Link>
+                {canEdit ? (
+                  <Link
+                    to={`/courses/${id}/edit`}
+                    onClick={(e) => e.stopPropagation()}
+                    style={{
+                      fontSize: 12,
+                      textDecoration: 'underline',
+                      color: disabled ? '#9ca3af' : '#2563eb',
+                      pointerEvents: disabled ? 'none' : 'auto'
+                    }}
+                    aria-label={`Edit course ${id}`}
+                  >
+                    Edit
+                  </Link>
+                ) : (
+                  <span style={{ fontSize: 12, color: '#9ca3af' }}>
+                    View only
+                  </span>
+                )}
 
-                {/* Optional mini labels on the right */}
                 {isSelected && (
                   <span style={{ fontSize: 12, color: '#065f46', fontWeight: 600 }}>
                     Selected
